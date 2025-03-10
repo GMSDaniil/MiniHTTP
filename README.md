@@ -30,7 +30,6 @@ This is a simple HTTP server written in C. It supports basic HTTP methods such a
 3. Run the server:
    ```
    ./build/webserver <IP-address> <port>
-
 ## Example with curl
 
 ### Static Resources:
