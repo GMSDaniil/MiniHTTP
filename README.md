@@ -1,22 +1,44 @@
-# Simple HTTP Server
+# Distributed Hash Table (DHT) MiniHTTP Server
 
-This is a simple HTTP server written in C. It supports basic HTTP methods such as `GET`, `POST`, `PUT`, and `DELETE`, and it handles both static and dynamic resources. The server supports creating, reading, and deleting dynamic resources, and it returns appropriate HTTP status codes for different types of requests.
+## Overview
+
+This is the second version of the HTTP server, now incorporating a Distributed Hash Table (DHT) for resource lookup and distribution. This version allows multiple nodes to form a distributed network where each node is responsible for certain resources based on consistent hashing.
 
 ## Features
 
-- **Supports HTTP methods**: `GET`, `POST`, `PUT`, `DELETE`.
-- **Static Resources**: Serves basic static files (`/static/foo`, `/static/bar`, `/static/baz`).
-- **Dynamic Resources**: Allows clients to add (`PUT`), retrieve (`GET`), and delete (`DELETE`) dynamic resources.
-- **Handles HTTP status codes**: Supports `200 OK`, `400 Bad Request`, `404 Not Found`, `501 Not Implemented`, and others.
-- **Built-in error handling**: Returns appropriate responses for malformed requests or unsupported actions.
-- **Written in C**: Uses basic socket programming to handle client-server communication over TCP/IP.
+- Supports **GET**, **PUT**, and **DELETE** HTTP methods.
+- Uses a **DHT-based lookup mechanism** to distribute resources across nodes.
+- Handles resource requests dynamically, forwarding requests when necessary.
+- Implements a **lookup and reply system** via UDP to locate responsible nodes.
+- Manages a successor and predecessor for routing requests efficiently.
 
+## How It Works
+
+1. **Node Initialization**
+
+   - Each node is assigned a unique ID.
+   - It stores references to its predecessor and successor in the network.
+
+2. **Resource Storage & Retrieval**
+
+   - Resources are stored based on hashed URI values.
+   - If a node receives a request for a resource it doesn’t own, it forwards the request.
+
+3. **Lookup Mechanism**
+
+   - If a node is not responsible for a resource, it sends a lookup request to its successor.
+   - If the lookup reaches the correct node, a reply is sent to the requester.
+
+4. **Handling Replies**
+
+   - Replies are stored to improve routing efficiency.
+   - If a responsible node is not yet known, a lookup is initiated.
 ## Requirements
 
 - **C Compiler**: You will need a C compiler like `gcc` to compile the project.
 - **Operating System**: The server is designed to run on Unix-based systems (Linux, macOS). For Windows, modifications to use Winsock are required.
 - **Networking Libraries**: The server uses `sys/socket.h`, `netdb.h`, and other networking headers.
-
+  
 ## Installation
 
 1. Clone the repository:
@@ -27,52 +49,53 @@ This is a simple HTTP server written in C. It supports basic HTTP methods such a
    ```
    cmake -B build -DCMAKE_BUILD_TYPE=Debug
    make -C build
-3. Run the server:
-   ```
-   ./build/webserver <IP-address> <port>
-## Example with curl
+## Use
 
-### Static Resources:
-- **Get Static Resource**:
-  ```bash
-  curl http://localhost:8080/static/foo
-  # Expected Response: Foo
+### Running the Server
+
+```sh
+PRED_ID=... PRED_IP=... PRED_PORT=... SUCC_ID=... SUCC_IP=... SUCC_PORT=... ./build/webserver <IP> <PORT> <ID>
+```
+- `PRED_..`: ID/IP/Port of predecessor node
+- `SUCC_..`: ID/IP/Port of successor node
+- `<IP>`: The IP address of the node.
+- `<PORT>`: The port number the node listens on.
+- `<ID>`: The IP address of the node.
+
+## Example Usage
+
+### Starting two Nodes
+
+```sh
+PRED_ID=49152 PRED_IP=127.0.0.1 PRED_PORT=2002 SUCC_ID=49152 SUCC_IP=127.0.0.1 SUCC_PORT=2002 ./build/webserver 127.0.0.1 2001 16384
+PRED_ID=16384 PRED_IP=127.0.0.1 PRED_PORT=2001 SUCC_ID=16384 SUCC_IP=127.0.0.1 SUCC_PORT=2001 ./build/webserver 127.0.0.1 2002 49152
+```
+
+### HTTP Requests
+
+- **Retrieve a resource:**
+  ```sh
+  curl -i localhost:2002/path-with-unknown-hash
+  # Response: HTTP/1.1 503 Service Unavailable
+  # Retry-After: 1
+  # Content-Length: 0
   ```
-
-- **Get Static Resource**:
-  ```bash
-  curl http://localhost:8080/static/bar
-  # Expected Response: Bar
+- **Store a new resource:**
+  ```sh
+  curl -i localhost:2002/path-with-unknown-hash
+  # Response: HTTP/1.1 303 See Other
+  # Location: http://127.0.0.1:2017/path-with-unknown-hash
+  # Content-Length: 0
   ```
-
-### Dynamic Resources:
-- **Create Dynamic Resource**:
-  ```bash
-  curl -X PUT http://localhost:8080/dynamic/myresource -d "This is dynamic content"
-  # Expected Response: HTTP/1.1 201 Created
+- **Delete a resource:**
+  ```sh
+  curl -i localhost:2017/path-with-unknown-hash
+  # Response: HTTP/1.1 404 Not Found 
+  # Content-Length: 0
+  # (Not Found if resource doesn't exists)
   ```
-
-- **Get Dynamic Resource**:
-  ```bash
-  curl http://localhost:8080/dynamic/myresource
-  # Expected Response: This is dynamic content
-  ```
-
-- **Delete Dynamic Resource**:
-  ```bash
-  curl -X DELETE http://localhost:8080/dynamic/myresource
-  # Expected Response: HTTP/1.1 204 No Content
-  ```
-
-## Error Handling
-
-The server performs basic validation and error handling to return appropriate status codes based on the received HTTP request:
-
-1. **Malformed Requests**: If the HTTP request is not valid (e.g., incorrect format or unsupported HTTP method), the server returns a `400 Bad Request` response.
-2. **Non-existent Resources**: If a requested resource does not exist, the server responds with `404 Not Found`.
-3. **Resource Creation Limits**: If there are too many dynamic resources, attempting to create a new one returns `403 Forbidden`.
-4. **Unsupported Methods**: If a request uses an unsupported HTTP method, such as a `PUT` on a static resource, it will return `501 Not Implemented`.
-
+  
 ## Acknowledgements
 
 - This project was created as an educational exercise to demonstrate HTTP server handling in C.
+
