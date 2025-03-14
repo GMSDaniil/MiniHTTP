@@ -67,29 +67,30 @@ PRED_ID=... PRED_IP=... PRED_PORT=... SUCC_ID=... SUCC_IP=... SUCC_PORT=... ./bu
 ### Starting two Nodes
 
 ```sh
-PRED_ID=49152 PRED_IP=127.0.0.1 PRED_PORT=2002 SUCC_ID=49152 SUCC_IP=127.0.0.1 SUCC_PORT=2002 ./build/webserver 127.0.0.1 2001 16384
-PRED_ID=16384 PRED_IP=127.0.0.1 PRED_PORT=2001 SUCC_ID=16384 SUCC_IP=127.0.0.1 SUCC_PORT=2001 ./build/webserver 127.0.0.1 2002 49152
+PRED_ID=55000 PRED_IP=127.0.0.1 PRED_PORT=2017 SUCC_ID=49152 SUCC_IP=127.0.0.1 SUCC_PORT=2002 ./build/webserver 127.0.0.1 2001 16384
+PRED_ID=16384 PRED_IP=127.0.0.1 PRED_PORT=2001 SUCC_ID=55000 SUCC_IP=127.0.0.1 SUCC_PORT=2017 ./build/webserver 127.0.0.1 2002 49152
+PRED_ID=49152 PRED_IP=127.0.0.1 PRED_PORT=2002 SUCC_ID=16384 SUCC_IP=127.0.0.1 SUCC_PORT=2001 ./build/webserver 127.0.0.1 2017 55000
 ```
 
 ### HTTP Requests
 
 - **Retrieve a resource:**
   ```sh
-  curl -i localhost:2002/path-with-unknown-hash
+  curl -i localhost:2017/path-with-unknown-hash
   # Response: HTTP/1.1 503 Service Unavailable
   # Retry-After: 1
   # Content-Length: 0
   ```
 - **Store a new resource:**
   ```sh
-  curl -i localhost:2002/path-with-unknown-hash
+  curl -i localhost:2017/path-with-unknown-hash
   # Response: HTTP/1.1 303 See Other
   # Location: http://127.0.0.1:2017/path-with-unknown-hash
   # Content-Length: 0
   ```
 - **Delete a resource:**
   ```sh
-  curl -i localhost:2017/path-with-unknown-hash
+  curl -i localhost:2002/path-with-unknown-hash
   # Response: HTTP/1.1 404 Not Found 
   # Content-Length: 0
   # (Not Found if resource doesn't exists)
